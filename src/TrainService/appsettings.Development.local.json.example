@@ -1,0 +1,11 @@
+{
+  "ConnectionStrings": {
+    "TrainDb": "Server=LIN-FR9TRN3;Database=RailwayTrainDb1;User Id=sa;Password='Password@123';TrustServerCertificate=True"
+  },
+  "Jwt": {
+    "Key": "abcd1234"
+  },
+  "InternalService": {
+    "ApiKey": "abcd1234
+  }
+}

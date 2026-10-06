@@ -1,0 +1,36 @@
+<header class="topbar">
+  <div class="brand-wrap">
+    <a routerLink="/" class="brand">
+      <span class="brand-icon" aria-hidden="true">🚆</span>
+      <span>Railway Network</span>
+    </a>
+  </div>
+
+  <nav class="nav" aria-label="Primary navigation">
+    <a routerLink="/">Home</a>
+    <a routerLink="/trains/search" [queryParams]="{ fromStationId: 1, toStationId: 2 }">Find Trains</a>
+    <a routerLink="/booking">Book Ticket</a>
+    <a routerLink="/reservation/lookup">PNR Status</a>
+  </nav>
+
+  <div class="user-actions">
+    <a routerLink="/profile">My Profile</a>
+
+    <ng-container *ngIf="isLoggedIn(); else guest">
+      <span class="welcome" *ngIf="currentUser() as user">
+        Hi, {{ user.name || user.email || 'Traveller' }}
+      </span>
+      <a *ngIf="isAdmin()" routerLink="/admin">Admin</a>
+      <button type="button" (click)="logout()">Logout</button>
+    </ng-container>
+
+    <ng-template #guest>
+      <a routerLink="/login">Login</a>
+      <a routerLink="/register">Register</a>
+    </ng-template>
+  </div>
+</header>
+
+<main class="container">
+  <router-outlet />
+</main>
