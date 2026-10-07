@@ -283,10 +283,12 @@ export class ProfileComponent {
         );
         this.bookings.set(updatedBooking);
         this.selectedBooking = updatedBooking.find((booking) => booking.pnr === this.selectedBooking?.pnr) ?? null;
+
+        setTimeout(() => {window.location.reload();},300);
       },
       error: (error: Error) => {
         this.errorMessage = error.message || 'Cancel request failed. Please check the backend and try again.';
-      },
+      }
     });
   }
 

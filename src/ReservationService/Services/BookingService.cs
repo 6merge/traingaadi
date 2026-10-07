@@ -37,12 +37,7 @@ public class BookingService(
         
         var toStop = routeStops.FirstOrDefault(stop => stop.StationId == request.ToStationId)
             ?? throw new InvalidOperationException("Booking destination station was not found on the train route.");
-
-        if (fromStop.StopOrder >= toStop.StopOrder)
-        {
-            throw new ArgumentException("Origin station must occur before destination station on the selected route.");
-        }
-
+        
         var fare = await trainClient.GetFareAsync(
             request.TrainId,
             request.FromStationId,
@@ -209,49 +204,65 @@ public class BookingService(
             booking.CreatedAt)).ToList();
     }
 
-    public async Task<ReservationDetailsResponse> GetReservationAsync(int userId, string pnr)
-    {
-        if (userId <= 0 || string.IsNullOrWhiteSpace(pnr))
-        {
-            throw new ArgumentException("User ID and PNR are required.");
-        }
-
-        var booking = await bookingRepository.GetByPnrAsync(pnr)
-            ?? throw new KeyNotFoundException("Booking was not found.");
-
-        if (booking.UserId != userId)
-        {
-            throw new UnauthorizedAccessException("Only the booking owner can view this reservation.");
-        }
-
-        var passengers = await bookingPassengerRepository.GetByBookingIdAsync(booking.Id);
-        var allocations = await seatAllocationRepository.GetByBookingIdAsync(booking.Id);
-        var waitlistPosition = booking.Status == BookingStatus.Waitlisted
-            ? (await waitlistRepository.GetByBookingIdAsync(booking.Id))?.Position
-            : null;
-        var responses = passengers.Select(passenger =>
-        {
-            var allocation = allocations.FirstOrDefault(item => item.BookingPassengerId == passenger.Id);
-            return new BookingPassengerResponse(
-                passenger.Id,
-                passenger.Name,
-                allocation?.CoachId.ToString(),
-                allocation?.SeatId.ToString());
-        }).ToList();
-
-        return new ReservationDetailsResponse(
-            booking.Pnr,
-            booking.Status,
-            booking.TrainId,
-            booking.FromStationId,
-            booking.ToStationId,
-            booking.JourneyDate,
-            booking.CoachType,
-            booking.Quota,
-            booking.TotalFare,
-            responses,
-            waitlistPosition);
-    }
+  public async Task<ReservationDetailsResponse> GetReservationAsync(
+   int userId,
+   string pnr)
+{
+   if (userId <= 0 || string.IsNullOrWhiteSpace(pnr))
+   {
+       throw new ArgumentException("User ID and PNR are required.");
+   }
+   // Get the booking first because we need its ID and status.
+   var booking = await bookingRepository.GetByPnrAsync(pnr)
+       ?? throw new KeyNotFoundException("Booking was not found.");
+   if (booking.UserId != userId)
+   {
+       throw new UnauthorizedAccessException(
+           "Only the booking owner can view this reservation.");
+   }
+   // These queries are independent, so run them together.
+   var passengersTask =
+       bookingPassengerRepository.GetByBookingIdAsync(booking.Id);
+   var allocationsTask =
+       seatAllocationRepository.GetByBookingIdAsync(booking.Id);
+   Task<WaitlistEntry?> waitlistTask =
+       booking.Status == BookingStatus.Waitlisted
+           ? waitlistRepository.GetByBookingIdAsync(booking.Id)
+           : Task.FromResult<WaitlistEntry?>(null);
+   await Task.WhenAll(
+       passengersTask,
+       allocationsTask,
+       waitlistTask);
+   var passengers = await passengersTask;
+   var allocations = await allocationsTask;
+   var waitlistEntry = await waitlistTask;
+   var waitlistPosition =
+       booking.Status == BookingStatus.Waitlisted
+           ? waitlistEntry?.Position
+           : null;
+   var responses = passengers.Select(passenger =>
+   {
+       var allocation = allocations.FirstOrDefault(
+           item => item.BookingPassengerId == passenger.Id);
+       return new BookingPassengerResponse(
+           passenger.Id,
+           passenger.Name,
+           allocation?.CoachId.ToString(),
+           allocation?.SeatId.ToString());
+   }).ToList();
+   return new ReservationDetailsResponse(
+       booking.Pnr,
+       booking.Status,
+       booking.TrainId,
+       booking.FromStationId,
+       booking.ToStationId,
+       booking.JourneyDate,
+       booking.CoachType,
+       booking.Quota,
+       booking.TotalFare,
+       responses,
+       waitlistPosition);
+}
 
     public async Task<bool> PromoteEarliestWaitlistedBookingAsync(
         int trainId,

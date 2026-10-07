@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-
+import {finalize} from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   AvailabilityResponse,

@@ -1,9 +1,6 @@
 <header class="topbar">
   <div class="brand-wrap">
-    <a routerLink="/" class="brand">
-      <span class="brand-icon" aria-hidden="true">🚆</span>
-      <span>Railway Network</span>
-    </a>
+    <a routerLink="/" class="brand">Railway Network</a>
   </div>
 
   <nav class="nav" aria-label="Primary navigation">
@@ -14,12 +11,11 @@
   </nav>
 
   <div class="user-actions">
-    <a routerLink="/profile">My Profile</a>
-
     <ng-container *ngIf="isLoggedIn(); else guest">
       <span class="welcome" *ngIf="currentUser() as user">
         Hi, {{ user.name || user.email || 'Traveller' }}
       </span>
+      <a routerLink="/profile">My Profile</a>
       <a *ngIf="isAdmin()" routerLink="/admin">Admin</a>
       <button type="button" (click)="logout()">Logout</button>
     </ng-container>
