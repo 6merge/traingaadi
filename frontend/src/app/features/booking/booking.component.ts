@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef,Component, OnDestroy, OnInit } from '@angular/core';
 import {
  FormArray,
  FormBuilder,
@@ -580,6 +580,7 @@ export class BookingComponent implements OnInit, OnDestroy {
  private querySubscription?: Subscription;
  readonly form: FormGroup;
  constructor(
+  private readonly cdr: ChangeDetectorRef,
    private readonly fb: FormBuilder,
    private readonly reservationService: ReservationService,
    private readonly paymentService: PaymentService,
@@ -674,36 +675,142 @@ export class BookingComponent implements OnInit, OnDestroy {
    this.challengeId = '';
    this.enteredOtp = '';
    this.stopOtpTimer();
-   this.requestOtp(payload);
+   this.requestOtp();
  }
- private requestOtp(payload: BookingRequest): void {
-   this.isPreparingPayment = true;
-   this.paymentError = '';
-   this.paymentService.requestOtp(payload).subscribe({
-     next: (response) => {
-       if (!response.challengeId) {
-         this.paymentError =
-           'The payment gateway could not start the OTP verification.';
-         this.isPreparingPayment = false;
-         return;
-       }
-       this.challengeId = response.challengeId;
-       this.maskedEmail = response.maskedEmail;
-       this.paymentAmount = Number(response.amount ?? 0);
-       this.remainingOtpSeconds =
-         Number(response.expiresInSeconds ?? 0);
-       this.enteredOtp = '';
-       this.isPreparingPayment = false;
-       this.startOtpTimer();
-     },
-     error: (error: Error) => {
-       this.isPreparingPayment = false;
-       this.paymentError =
-         error.message ||
-         'Unable to send the payment OTP.';
-     },
-   });
- }
+ private requestOtp(): void {
+
+  if (!this.paymentPayload) {
+
+    this.paymentError =
+
+      'Booking information is missing. Please try again.';
+
+    this.isPreparingPayment = false;
+
+    this.isSubmitting = false;
+
+    return;
+
+  }
+
+  this.isPreparingPayment = true;
+
+  this.isResendingOtp = false;
+
+  this.paymentError = '';
+
+  this.paymentService
+
+    .requestOtp(this.paymentPayload)
+
+    .subscribe({
+
+      next: (response) => {
+
+        console.log(
+
+          'Payment OTP response received:',
+
+          response,
+
+        );
+
+        this.challengeId = response.challengeId;
+
+        this.maskedEmail = response.maskedEmail;
+
+        this.paymentAmount = Number(response.amount);
+
+        if (
+
+          !Number.isFinite(this.paymentAmount) ||
+
+          this.paymentAmount < 0
+
+        ) {
+
+          this.paymentAmount = 0;
+
+        }
+
+        this.remainingOtpSeconds =
+
+          Number(response.expiresInSeconds) || 120;
+
+        this.isPreparingPayment = false;
+
+        this.isSubmitting = false;
+
+        this.isResendingOtp = false;
+
+        this.enteredOtp = '';
+
+        this.paymentError = '';
+
+        this.cdr.detectChanges(); // Ensure UI updates before starting timer;
+
+        this.startOtpTimer();
+
+        if (!this.challengeId) {
+
+          this.paymentError =
+
+            'Payment gateway did not return a valid OTP challenge.';
+
+        }
+
+        console.log('Challenge ID:', this.challengeId);
+
+        console.log('Masked email:', this.maskedEmail);
+
+        console.log('Payment amount:', this.paymentAmount);
+
+        console.log(
+
+          'OTP expiry:',
+
+          this.remainingOtpSeconds,
+
+        );
+
+      },
+
+      error: (error) => {
+
+        console.error(
+
+          'Payment OTP request failed:',
+
+          error,
+
+        );
+
+        this.isPreparingPayment = false;
+
+        this.isSubmitting = false;
+
+        this.isResendingOtp = false;
+
+        this.paymentError =
+
+          error?.error?.message ||
+
+          error?.error?.Message ||
+
+          error?.error?.title ||
+
+          error?.error?.detail ||
+
+          'Unable to send the payment OTP. Please try again.';
+
+          this.cdr.detectChanges(); // Ensure UI updates after error
+
+      },
+
+    });
+
+}
+
  resendOtp(): void {
    if (!this.paymentPayload || this.isResendingOtp) {
      return;
@@ -725,117 +832,189 @@ export class BookingComponent implements OnInit, OnDestroy {
            Number(response.expiresInSeconds ?? 0);
          this.isResendingOtp = false;
          this.startOtpTimer();
+         this.cdr.detectChanges(); // Ensure UI updates after resending OTP;
        },
        error: (error: Error) => {
          this.isResendingOtp = false;
          this.paymentError =
            error.message ||
            'Unable to resend the OTP.';
+           this.cdr.detectChanges(); // Ensure UI updates after error
        },
      });
  }
- verifyAndPay(): void {
-   if (!this.paymentPayload) {
-     this.paymentError =
-       'Booking information is missing.';
-     return;
-   }
-   if (!this.challengeId) {
-     this.paymentError =
-       'Please request a new OTP.';
-     return;
-   }
-   if (this.remainingOtpSeconds <= 0) {
-     this.paymentError =
-       'OTP has expired. Please request a new OTP.';
-     return;
-   }
-   if (this.enteredOtp.length !== 6) {
-     this.paymentError =
-       'Enter the complete 6-digit OTP.';
-     return;
-   }
-   this.isProcessingPayment = true;
-   this.paymentError = '';
-   this.paymentService
-     .verifyOtp(
-       this.challengeId,
-       this.enteredOtp,
-       this.paymentPayload,
-     )
-     .subscribe({
-       next: (response) => {
-         if (!response.verificationToken) {
-           this.isProcessingPayment = false;
-           this.paymentError =
-             'Payment verification failed.';
-           return;
-         }
-         const verifiedPayload: BookingRequest = {
-           ...this.paymentPayload!,
-           paymentVerificationToken:
-             response.verificationToken,
-         };
-         this.submitReservation(
-           verifiedPayload,
-         );
-       },
-       error: (error: Error) => {
+ private verifyAndPay(): void {
+ if (!this.paymentPayload) {
+   this.paymentError =
+     'Booking information is missing. Please try again.';
+   return;
+ }
+ if (!this.challengeId) {
+   this.paymentError =
+     'Payment OTP challenge is missing. Please request a new OTP.';
+   return;
+ }
+ if (!this.enteredOtp || this.enteredOtp.length !== 6) {
+   this.paymentError =
+     'Please enter the 6-digit OTP.';
+   return;
+ }
+ if (this.remainingOtpSeconds <= 0) {
+   this.paymentError =
+     'The OTP has expired. Please request a new OTP.';
+   return;
+ }
+ this.isProcessingPayment = true;
+ this.paymentError = '';
+ this.paymentService
+   .verifyOtp(
+     this.challengeId,
+     this.enteredOtp,
+     this.paymentPayload,
+   )
+   .subscribe({
+     next: (response) => {
+       console.log(
+         'Payment OTP verification response:',
+         response,
+       );
+       if (!response.verificationToken) {
          this.isProcessingPayment = false;
          this.paymentError =
-           error.message ||
-           'Incorrect or expired OTP.';
-       },
-     });
- }
- private submitReservation(
-   payload: BookingRequest,
- ): void {
-   this.reservationService
-     .createReservation(payload)
-     .subscribe({
-       next: (result) => {
-         const pnr =
-           result.pnr ??
-           result.pnrNumber ??
-           '';
-         if (pnr) {
-           this.reservationService.saveBookingSummary({
-             pnr,
-             trainId: payload.trainId,
-             fromStationId:
-               payload.fromStationId,
-             toStationId:
-               payload.toStationId,
-             coachType: payload.coachType,
-             status:
-               result.status ?? 'Confirmed',
-             journeyDate:
-               payload.journeyDate,
-             createdAt:
-               new Date().toISOString(),
-           });
-         }
-         this.stopOtpTimer();
-         this.showPaymentGateway = false;
-         this.isProcessingPayment = false;
-         this.isSubmitting = false;
-         this.router.navigate(
-           ['/reservation/confirmation'],
-           {
-             queryParams: { pnr },
-           },
-         );
-       },
-       error: (error: Error) => {
-         this.isProcessingPayment = false;
-         this.isSubmitting = false;
-         this.paymentError =
-           error.message ||
-           'Booking could not be completed.';
-       },
-     });
- }
+           'Payment verification failed. Please try again.';
+         return;
+       }
+       this.submitReservation(
+         response.verificationToken,
+       );
+     },
+     error: (error) => {
+       console.error(
+         'Payment OTP verification failed:',
+         error,
+       );
+       this.isProcessingPayment = false;
+       this.paymentError =
+         error?.error?.message ||
+         error?.error?.Message ||
+         error?.error?.title ||
+         error?.error?.detail ||
+         'Invalid or expired OTP. Please try again.';
+     },
+   });
+}
+private submitReservation(
+
+  paymentVerificationToken: string,
+
+): void {
+
+  if (!this.paymentPayload) {
+
+    this.isProcessingPayment = false;
+
+    this.paymentError =
+
+      'Booking information is missing. Please try again.';
+
+    return;
+
+  }
+
+  const finalPayload: BookingRequest = {
+
+    ...this.paymentPayload,
+
+    paymentVerificationToken,
+
+  };
+
+  console.log(
+
+    'Submitting reservation after OTP verification:',
+
+    finalPayload,
+
+  );
+
+  this.reservationService
+
+    .createReservation(finalPayload)
+
+    .subscribe({
+
+      next: (response) => {
+
+        console.log(
+
+          'Reservation created successfully:',
+
+          response,
+
+        );
+
+        this.isProcessingPayment = false;
+
+        this.isPreparingPayment = false;
+
+        this.isSubmitting = false;
+
+        this.stopOtpTimer();
+
+        this.showPaymentGateway = false;
+
+        this.paymentError = '';
+
+        this.router.navigate(
+
+          ['/booking-confirmation'],
+
+          {
+
+            state: {
+
+              booking: response,
+
+            },
+
+          },
+
+        );
+
+      },
+
+      error: (error) => {
+
+        console.error(
+
+          'Reservation creation failed:',
+
+          error,
+
+        );
+
+        this.isProcessingPayment = false;
+
+        this.isSubmitting = false;
+
+        this.paymentError =
+
+          error?.error?.message ||
+
+          error?.error?.Message ||
+
+          error?.error?.title ||
+
+          error?.error?.detail ||
+
+          'Payment was verified, but the booking could not be completed.';
+
+      },
+
+    });
+
+}
+
  closePaymentGateway(): void {
    if (
      this.isProcessingPayment ||
