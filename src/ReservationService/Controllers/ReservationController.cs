@@ -10,7 +10,8 @@ namespace ReservationService.Controllers;
 [Route("api/reservations")]
 public class ReservationController(
     IBookingService bookingService,
-    IAvailabilityService availabilityService) : ControllerBase
+    IAvailabilityService availabilityService,
+    IPaymentOtpService paymentOtpService) : ControllerBase
 {
     [HttpPost]
     [Authorize]
@@ -94,6 +95,126 @@ public class ReservationController(
         }
     }
 
+    [HttpPost("payment/otp/send")]
+
+[Authorize]
+
+public async Task<ActionResult<PaymentOtpResponse>> SendPaymentOtp(
+
+    BookingRequest request)
+
+{
+
+    if (!TryGetAuthenticatedUserId(out var userId))
+
+    {
+
+        return Unauthorized();
+
+    }
+
+    try
+
+    {
+
+        var response = await paymentOtpService.SendOtpAsync(
+
+            userId,
+
+            request);
+
+        return Ok(response);
+
+    }
+
+    catch (ArgumentException exception)
+
+    {
+
+        return BadRequest(exception.Message);
+
+    }
+
+    catch (InvalidOperationException exception)
+
+    {
+
+        return BadRequest(exception.Message);
+
+    }
+
+    catch (HttpRequestException exception)
+
+    {
+
+        return StatusCode(
+
+            StatusCodes.Status502BadGateway,
+
+            exception.Message);
+
+    }
+
+}
+
+[HttpPost("payment/otp/verify")]
+
+[Authorize]
+
+public async Task<ActionResult<PaymentOtpVerificationResponse>> VerifyPaymentOtp(
+
+    PaymentOtpVerifyRequest request)
+
+{
+
+    if (!TryGetAuthenticatedUserId(out var userId))
+
+    {
+
+        return Unauthorized();
+
+    }
+
+    try
+
+    {
+
+        var response = await paymentOtpService.VerifyOtpAsync(
+
+            userId,
+
+            request);
+
+        return Ok(response);
+
+    }
+
+    catch (ArgumentException exception)
+
+    {
+
+        return BadRequest(exception.Message);
+
+    }
+
+    catch (InvalidOperationException exception)
+
+    {
+
+        return BadRequest(exception.Message);
+
+    }
+
+    catch (UnauthorizedAccessException)
+
+    {
+
+        return Forbid();
+
+    }
+
+}
+ 
     [HttpPost("{pnr}/cancel")]
     [Authorize]
     public async Task<ActionResult<BookingResponse>> Cancel(string pnr)

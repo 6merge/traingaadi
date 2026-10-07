@@ -15,7 +15,8 @@ public record BookingRequest(
     DateTime JourneyDate,
     CoachType CoachType,
     QuotaType Quota,
-    List<BookingPassengerRequest> Passengers);
+    List<BookingPassengerRequest> Passengers,
+    string? PaymentVerificationToken = null);
 
 public record BookingPassengerResponse(
     int BookingPassengerId,
@@ -60,4 +61,16 @@ public record AvailabilityRequest(
     DateTime JourneyDate,
     CoachType CoachType);
 
+public record PaymentOtpResponse(
+   string ChallengeId,
+   string MaskedEmail,
+   decimal Amount,
+   int ExpiresInSeconds);
+public record PaymentOtpVerifyRequest(
+   string ChallengeId,
+   string Otp,
+   BookingRequest BookingRequest);
+public record PaymentOtpVerificationResponse(
+   string VerificationToken,
+   int ExpiresInSeconds);
 public record AvailabilityResponse(int AvailableSeats);

@@ -109,6 +109,7 @@ export interface BookingRequest {
  coachType: CoachType;
  quota: QuotaType;
  passengers: BookingPassengerRequest[];
+ paymentVerificationToken? :string | null;
 }
 export type ReservationRequest = BookingRequest;
 export type Passenger = BookingPassengerRequest;

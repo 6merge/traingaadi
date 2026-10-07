@@ -82,6 +82,7 @@ builder.Services.AddScoped<ReservationService.Repositories.ISeatAllocationReposi
 builder.Services.AddScoped<ReservationService.Repositories.IWaitlistRepository, ReservationService.Repositories.WaitlistRepository>();
 builder.Services.AddScoped<ReservationService.Services.IAvailabilityService, ReservationService.Services.AvailabilityService>();
 builder.Services.AddScoped<ReservationService.Services.IBookingService, ReservationService.Services.BookingService>();
+builder.Services.AddScoped<ReservationService.Services.IPaymentOtpService, ReservationService.Services.PaymentOtpService>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

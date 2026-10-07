@@ -141,7 +141,30 @@ app.MapGet("/api/reservations/availability", (
     .WithTags("Reservations")
     .Produces<AvailabilityResponse>()
     .Produces(StatusCodes.Status400BadRequest);
-
+app.MapPost(
+       "/api/reservations/payment/otp/send",
+       (HttpContext context, BookingRequest request, GatewayProxy proxy) =>
+           proxy.ForwardJsonAsync(
+               context,
+               "ReservationService",
+               request))
+   .WithTags("Reservations")
+   .RequireAuthorization(new AuthorizeAttribute { Roles = "Passenger" })
+   .Produces<PaymentOtpResponse>()
+   .Produces(StatusCodes.Status400BadRequest)
+   .Produces(StatusCodes.Status401Unauthorized);
+app.MapPost(
+       "/api/reservations/payment/otp/verify",
+       (HttpContext context, PaymentOtpVerifyRequest request, GatewayProxy proxy) =>
+           proxy.ForwardJsonAsync(
+               context,
+               "ReservationService",
+               request))
+   .WithTags("Reservations")
+   .RequireAuthorization(new AuthorizeAttribute { Roles = "Passenger" })
+   .Produces<PaymentOtpVerificationResponse>()
+   .Produces(StatusCodes.Status400BadRequest)
+   .Produces(StatusCodes.Status401Unauthorized);
 // Passenger reservation operations
 app.MapPost("/api/reservations", (HttpContext context, BookingRequest request, GatewayProxy proxy) =>
         proxy.ForwardJsonAsync(context, "ReservationService", request))

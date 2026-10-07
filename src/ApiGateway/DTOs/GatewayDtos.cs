@@ -81,3 +81,27 @@ public record CoachAdminRequest(int TrainId, string CoachNumber, CoachType Coach
 public record SeatRequest(string SeatNumber);
 public record SeatAdminRequest(int CoachId, string SeatNumber);
 public record FareAdminRequest(int TrainId, int FromStationId, int ToStationId, CoachType CoachType, decimal Amount);
+public record PaymentOtpResponse(
+
+    string ChallengeId,
+
+    string MaskedEmail,
+
+    decimal Amount,
+
+    int ExpiresInSeconds);
+
+public record PaymentOtpVerifyRequest(
+
+    string ChallengeId,
+
+    string Otp,
+
+    BookingRequest BookingRequest);
+
+public record PaymentOtpVerificationResponse(
+
+    string VerificationToken,
+
+    int ExpiresInSeconds);
+ 
