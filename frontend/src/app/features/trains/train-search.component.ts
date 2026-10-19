@@ -779,6 +779,7 @@ export class TrainSearchComponent implements OnInit {
      .pipe(
        finalize(() => {
          this.availabilityLoading.delete(trainId);
+         this.cdr.markForCheck();
        }),
      )
      .subscribe({
@@ -801,7 +802,7 @@ export class TrainSearchComponent implements OnInit {
              coachType,
            },
          );
-         this.cdr.detectChanges(); // Trigger change detection after updating availability and fare
+         this.cdr.markForCheck();
        },
        error: (error: Error) => {
          console.error(
@@ -820,6 +821,7 @@ export class TrainSearchComponent implements OnInit {
          this.errorMessage =
            error.message ??
            'Unable to check availability.';
+         this.cdr.markForCheck();
        },
      });
  }
@@ -836,6 +838,7 @@ export class TrainSearchComponent implements OnInit {
      .pipe(
        finalize(() => {
          this.routeLoading.delete(trainId);
+         this.cdr.markForCheck();
        }),
      )
      .subscribe({
@@ -846,7 +849,7 @@ export class TrainSearchComponent implements OnInit {
              ? route
              : [],
          );
-         this.cdr.detectChanges(); // Trigger change detection after updating route
+         this.cdr.markForCheck();
        },
        error: (error: Error) => {
          console.error(
@@ -857,6 +860,7 @@ export class TrainSearchComponent implements OnInit {
          this.errorMessage =
            error.message ??
            'Unable to load train route.';
+         this.cdr.markForCheck();
        },
      });
  }

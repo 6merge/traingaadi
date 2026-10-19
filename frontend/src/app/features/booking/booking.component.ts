@@ -967,7 +967,7 @@ private submitReservation(
 
         this.router.navigate(
 
-          ['/booking-confirmation'],
+          ['/reservation/confirmation'],
 
           {
 

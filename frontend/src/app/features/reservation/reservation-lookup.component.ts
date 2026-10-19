@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { STATION_OPTIONS, normalizeBookingStatus, normalizeCoachType } from '../../core/models/railway.models';
@@ -79,6 +79,7 @@ export class ReservationLookupComponent {
   constructor(
     private readonly fb: FormBuilder,
     private readonly reservationService: ReservationService,
+    private readonly cdr: ChangeDetectorRef,
   ) {
     this.form = this.fb.nonNullable.group({
       pnrNumber: ['', [Validators.required]],
@@ -94,6 +95,8 @@ export class ReservationLookupComponent {
       if (trimmed.length === 0) {
         this.result = null;
       }
+
+      this.cdr.markForCheck();
     });
   }
 
@@ -116,16 +119,19 @@ export class ReservationLookupComponent {
           this.result = null;
           this.errorMessage = 'No booking was found for this PNR.';
           this.isSubmitting = false;
+          this.cdr.markForCheck();
           return;
         }
 
         this.result = reservation;
         this.isSubmitting = false;
+        this.cdr.markForCheck();
       },
       error: (error: Error) => {
         this.isSubmitting = false;
         this.result = null;
         this.errorMessage = error.message || 'No booking was found for this PNR.';
+        this.cdr.markForCheck();
       },
     });
   }

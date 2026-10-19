@@ -47,9 +47,10 @@ public record BookingRequest(
     DateTime JourneyDate,
     CoachType CoachType,
     QuotaType Quota,
-    List<BookingPassengerRequest> Passengers);
+    List<BookingPassengerRequest> Passengers,
+    string? PaymentVerificationToken = null);
 public record BookingPassengerResponse(int BookingPassengerId, string Name, string? CoachNumber, string? SeatNumber);
-public record BookingResponse(string Pnr, BookingStatus Status, decimal TotalFare, List<BookingPassengerResponse> Passengers);
+public record BookingResponse(string Pnr, BookingStatus Status, decimal TotalFare, List<BookingPassengerResponse> Passengers,int? WaitlistPosition);
 public record BookingSummaryResponse(
     string Pnr,
     int TrainId,

@@ -16,8 +16,8 @@ export class App {
   private readonly router = inject(Router);
 
   readonly currentUser = this.authService.currentUser;
-  readonly isLoggedIn = computed(() => this.authService.isAuthenticated());
-  readonly isAdmin = computed(() => this.authService.isAdmin());
+  readonly isLoggedIn = computed(() => !!this.authService.currentUser() || this.authService.isAuthenticated());
+  readonly isAdmin = computed(() => this.authService.currentUser()?.role === 'Administrator' || this.authService.isAdmin());
 
   logout(): void {
     this.authService.logout();
